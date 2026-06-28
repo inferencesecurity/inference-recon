@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ f.title[:60] }} — AI Sec Review{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:12px; font-size:13px">
+  <a href="/scans/{{ f.scan_id }}">← {{ f.repo_name }}</a>
+</div>
+
+<h1 style="margin-bottom:12px">{{ f.title }}</h1>
+
+<div class="finding-meta">
+  <span class="badge {{ sev_css.get(f.severity,'') }}">{{ f.severity }}</span>
+  <span class="badge sev-info">{{ f.confidence }} confidence</span>
+  <span class="tag">{{ f.category }}</span>
+  {% if f.corroboration_count and f.corroboration_count > 1 %}
+  <span class="badge grade-a">{{ f.corroboration_count }}× corroborated</span>
+  {% endif %}
+</div>
+
+<div class="card">
+
+  <div class="detail-block">
+    <div class="detail-label">Evidence</div>
+    <div class="mono text-muted" style="margin-bottom:6px">
+      {{ f.evidence_file }}{% if f.evidence_line_start %}:{{ f.evidence_line_start }}
+      {%- if f.evidence_line_end and f.evidence_line_end != f.evidence_line_start %}–{{ f.evidence_line_end }}{% endif %}
+      {% endif %}
+    </div>
+    {% if f.evidence_quote %}
+    <pre class="evidence-quote">{{ f.evidence_quote }}</pre>
+    {% endif %}
+  </div>
+
+  {% if f.exploitation_path %}
+  <div class="detail-block">
+    <div class="detail-label">Exploitation path</div>
+    <p>{{ f.exploitation_path }}</p>
+  </div>
+  {% endif %}
+
+  <div class="detail-block">
+    <div class="detail-label">Remediation</div>
+    <p>{{ f.remediation }}</p>
+  </div>
+
+  {% if f.owasp_mapping %}
+  <div class="detail-block">
+    <div class="detail-label">OWASP</div>
+    {% for code in f.owasp_mapping | from_json %}
+    <span class="tag">{{ code }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if f.references_list %}
+  <div class="detail-block">
+    <div class="detail-label">References</div>
+    {% for ref in f.references_list | from_json %}
+    <span class="tag">{{ ref }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<div class="card">
+  <div class="detail-label">Scan context</div>
+  <div class="flex text-muted" style="font-size:12px; flex-wrap:wrap; gap:16px; margin-top:6px">
+    <span>Model: <strong class="mono">{{ f.model }}</strong></span>
+    <span>Scanned: {{ f.timestamp[:16] }}</span>
+    <span>Status: {{ f.status or 'open' }}</span>
+    {% if f.corroboration_count %}
+    <span>Corroboration: {{ f.corroboration_count }}</span>
+    {% endif %}
+    {% if f.corroborating_tools %}
+    <span>Tools: {{ f.corroborating_tools }}</span>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

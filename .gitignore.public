@@ -1,0 +1,2 @@
+# Add this to your project's .gitignore to keep scan output out of your repo:
+security-review/

@@ -1,0 +1,22 @@
+# Inference Recon — remaining corpus repos (Track 1)
+#
+# twitterbio and VAmPI are covered by benchmark.txt runs.
+# These four are the rest of the Track 1 corpus; run with Sonnet.
+#
+#   python3 eval/batch_scan.py eval/corpus/corpus-remaining.txt --model anthropic/claude-sonnet-4-6
+
+# vercel/nextjs-subscription-payments — canonical Supabase + Stripe starter
+# FP baseline (Vercel-maintained). Rules: STR-01/02, SUP-01/02.
+https://github.com/vercel/nextjs-subscription-payments
+
+# mckaywrigley/chatbot-ui — open-source ChatGPT-style UI, Next.js + Supabase
+# Rules: AI-01/02, NJS-02, SUP-02, VC-01.
+https://github.com/mckaywrigley/chatbot-ui
+
+# shadcn-ui/taxonomy — Next.js 13 App Router + Prisma + Auth.js + Stripe
+# Rules: NJS-02/03/04, STR-01/02.
+https://github.com/shadcn-ui/taxonomy
+
+# mickasmt/next-saas-stripe-starter — Next.js 14 + Prisma + Auth.js + Stripe
+# Rules: STR-01/02, NJS-02/03.
+https://github.com/mickasmt/next-saas-stripe-starter

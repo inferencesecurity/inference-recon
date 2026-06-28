@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AI Sec Review{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <a href="/scan" class="btn btn-primary">+ Run Scan</a>
+</div>
+
+{% if scans %}
+<div class="card" style="padding:0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Model</th>
+          <th>Tool</th>
+          <th>Timestamp</th>
+          <th>Overall</th>
+          <th>C</th><th>H</th><th>M</th><th>L</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in scans %}
+        <tr>
+          <td><a href="/projects/{{ s.project_id }}">{{ s.repo_name }}</a></td>
+          <td class="mono text-muted">{{ s.model.split('/')[-1] if '/' in s.model else s.model }}</td>
+          <td class="text-muted">{{ s.tool or '—' }}</td>
+          <td class="mono text-muted">{{ s.timestamp[:16] }}</td>
+          <td>
+            <span class="badge grade-lg {{ grade_css.get(s.overall, 'grade-na') }}">
+              {{ s.overall }}
+            </span>
+          </td>
+          <td><span class="badge sev-critical">{{ s.count_critical }}</span></td>
+          <td><span class="badge sev-high">{{ s.count_high }}</span></td>
+          <td><span class="badge sev-medium">{{ s.count_medium }}</span></td>
+          <td><span class="badge sev-low">{{ s.count_low }}</span></td>
+          <td>
+            <a href="/scans/{{ s.scan_id }}" class="btn btn-ghost" style="padding:3px 10px;font-size:12px;">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <p class="empty">No scans yet. <a href="/scan">Run your first scan →</a></p>
+</div>
+{% endif %}
+{% endblock %}

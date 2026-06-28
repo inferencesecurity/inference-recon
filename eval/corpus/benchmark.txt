@@ -1,0 +1,19 @@
+# Inference Recon — model benchmark
+#
+# Small, representative targets for Haiku / Sonnet / Opus comparison.
+# Run all three models against this file to collect cost, runtime, and
+# finding-quality data. The Sonnet pass here also counts as the corpus
+# run for these repos (don't double-ingest).
+#
+#   python3 eval/batch_scan.py eval/corpus/benchmark.txt --model anthropic/claude-haiku-4-5-20251001
+#   python3 eval/batch_scan.py eval/corpus/benchmark.txt --model anthropic/claude-sonnet-4-6
+#   python3 eval/batch_scan.py eval/corpus/benchmark.txt --model anthropic/claude-opus-4-7
+
+# Nutlope/twitterbio — minimal Next.js + Together AI (11K tokens)
+# Real-world target: Sonnet already ran via Claude Code; API runs give clean comparison.
+https://github.com/Nutlope/twitterbio
+
+# erev0s/VAmPI — Python Flask, deliberately vulnerable (22K tokens)
+# Academic target: known ground truth (14 expected findings).
+# Precision/recall measurable — ideal for model quality comparison.
+https://github.com/erev0s/VAmPI

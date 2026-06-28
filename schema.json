@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inferencerecon.com/schema/v0.3/findings.json",
+  "title": "Inference Recon — Findings Envelope",
+  "description": "Top-level report produced by an AI-driven security review. v0.2 adds data_profile; v0.3 adds threat_model with Level 1 DFD and dfd_element on findings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scan", "project", "data_profile", "threat_model", "summary", "findings"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.3",
+      "description": "Version of this schema. Bumped to 0.3 to add the required threat_model / DFD object."
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestamp", "model", "prompt_version"],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the scan was produced."
+        },
+        "model": {
+          "type": "string",
+          "description": "Identifier of the model that produced the findings (e.g., 'claude-opus-4-7')."
+        },
+        "prompt_version": {
+          "type": "string",
+          "description": "Version of the orchestration prompt used. Tracked separately from schema_version so prompt iteration can be measured against a stable schema."
+        },
+        "duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional. Wall-clock time of the scan."
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "files_scanned", "size_budget_status"],
+      "properties": {
+        "name": { "type": "string" },
+        "files_scanned": { "type": "integer", "minimum": 0 },
+        "size_budget_status": {
+          "type": "string",
+          "enum": ["within", "exceeded", "unknown"],
+          "description": "Whether the project fits within the published size budget for this version."
+        },
+        "commit_hash": {
+          "type": "string",
+          "description": "Optional. Git commit hash of the scanned state."
+        },
+        "branch": {
+          "type": "string",
+          "description": "Optional. Git branch name."
+        },
+        "stack_packs_loaded": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Names of stack-specific rule packs loaded for this scan. Empty if none."
+        }
+      }
+    },
+    "data_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sensitivity_tier", "categories", "regulatory_flags"],
+      "description": "Assessment of what data types this application handles and which regulatory frameworks likely apply. Always emitted. The model reasons from model/schema definitions, migration files, validation schemas, third-party SDK imports, env var names, and documentation in the repo. This profile is the risk multiplier for interpreting findings — the same finding has materially different implications at different sensitivity tiers.",
+      "properties": {
+        "sensitivity_tier": {
+          "$ref": "#/$defs/sensitivity_tier"
+        },
+        "categories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/data_category_entry" },
+          "description": "Data categories detected in the codebase with supporting evidence."
+        },
+        "regulatory_flags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/regulatory_flag" },
+          "description": "Regulatory frameworks assessed for applicability based on detected data categories."
+        },
+        "context_note": {
+          "type": "string",
+          "description": "Optional. 1–3 sentence narrative contextualising the sensitivity tier and its implications for interpreting this report's findings."
+        }
+      }
+    },
+    "threat_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dfd"],
+      "description": "Threat model artifacts derived from the codebase. v0.3 contains the Level 1 DFD only. Future versions may add STRIDE tables, attack surface enumeration, and finding-to-node cross-references.",
+      "properties": {
+        "dfd": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mermaid"],
+          "description": "Level 1 Data Flow Diagram. Actors, processes, data stores, data flows, and trust boundaries derived from source code inventory.",
+          "properties": {
+            "mermaid": {
+              "type": "string",
+              "description": "Mermaid flowchart source. Rendered in the HTML report via mermaid.js; emitted in the markdown report as a ```mermaid fenced block. Node IDs should be stable lowercase identifiers (e.g. users_db, app_server) to support future finding cross-referencing via dfd_element."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Optional. Caveats about what was inferred vs. directly observed, significant simplifications made, or elements that could not be determined from source (e.g. 'deployment topology inferred from docker-compose.yml; actual network segmentation unknown')."
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scorecard", "counts_by_severity", "counts_by_confidence"],
+      "properties": {
+        "scorecard": {
+          "type": "object",
+          "description": "Letter grade per scope domain. DERIVED from findings; not authored independently by the model.",
+          "additionalProperties": false,
+          "required": ["code", "dependencies", "secrets_and_config", "architecture", "overall"],
+          "properties": {
+            "code": { "$ref": "#/$defs/grade" },
+            "dependencies": { "$ref": "#/$defs/grade" },
+            "secrets_and_config": { "$ref": "#/$defs/grade" },
+            "architecture": { "$ref": "#/$defs/grade" },
+            "overall": { "$ref": "#/$defs/grade" }
+          }
+        },
+        "counts_by_severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["critical", "high", "medium", "low", "info"],
+          "properties": {
+            "critical": { "type": "integer", "minimum": 0 },
+            "high": { "type": "integer", "minimum": 0 },
+            "medium": { "type": "integer", "minimum": 0 },
+            "low": { "type": "integer", "minimum": 0 },
+            "info": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "counts_by_confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["high", "medium", "low"],
+          "properties": {
+            "high": { "type": "integer", "minimum": 0 },
+            "medium": { "type": "integer", "minimum": 0 },
+            "low": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Scan limitations, files skipped, caveats, or other meta information the reader should know."
+    }
+  },
+  "$defs": {
+    "grade": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D", "F", "N/A"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "info"]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "sensitivity_tier": {
+      "type": "string",
+      "enum": ["minimal", "standard", "elevated", "high", "critical"],
+      "description": "minimal: basic identity/session data only, no regulatory triggers. standard: contact info, basic profile data; GDPR/CCPA may apply. elevated: government IDs, precise financial metadata, location history, or combinations that together raise stakes. high: payment card data (PCI-DSS), PHI (HIPAA), biometrics (BIPA), or GDPR special categories. critical: multiple high-sensitivity categories simultaneously, or children's data (COPPA)."
+    },
+    "data_category": {
+      "type": "string",
+      "enum": [
+        "identity_basic",
+        "contact_info",
+        "auth_credentials",
+        "financial_payment",
+        "financial_account",
+        "government_id",
+        "health_phi",
+        "biometric",
+        "location",
+        "childrens_data",
+        "gdpr_special_category",
+        "other_sensitive"
+      ],
+      "description": "identity_basic: name, email, username, profile picture. contact_info: phone, postal address, IP-as-identifier. auth_credentials: passwords (hashed or plain), session tokens, MFA seeds, OAuth tokens. financial_payment: card numbers, CVV, PANs, expiry dates — PCI-DSS scope. financial_account: bank account/routing numbers, ACH data — GLBA scope. government_id: SSN, TIN, passport, driver's licence, national ID. health_phi: diagnoses, medications, insurance IDs, medical record numbers — HIPAA scope. biometric: fingerprints, facial recognition data, voice prints. location: GPS coordinates, movement history, precise location tracking. childrens_data: any data about users under 13 — COPPA scope. gdpr_special_category: racial/ethnic origin, political opinions, religious beliefs, trade union membership, genetic data, sexual orientation. other_sensitive: anything sensitive not covered above; requires explanation in evidence_summary."
+    },
+    "data_category_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "confidence", "evidence_summary"],
+      "properties": {
+        "category": { "$ref": "#/$defs/data_category" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence_summary": {
+          "type": "string",
+          "description": "Concise description of where this data type was found: field names, file paths, SDK names, env var names. Not a verbatim quote — a human-readable pointer (e.g., 'card_number, cvv columns in app/models/payment.py; stripe SDK in requirements.txt')."
+        },
+        "locations": {
+          "type": "array",
+          "description": "Optional specific file locations when evidence is quotable.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file"],
+            "properties": {
+              "file": { "type": "string" },
+              "line_start": { "type": "integer", "minimum": 1 },
+              "line_end": { "type": "integer", "minimum": 1 },
+              "quote": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "regulatory_flag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["regulation", "applicability", "rationale"],
+      "properties": {
+        "regulation": {
+          "type": "string",
+          "enum": [
+            "PCI-DSS",
+            "HIPAA",
+            "GDPR",
+            "CCPA",
+            "COPPA",
+            "GLBA",
+            "FERPA",
+            "BIPA",
+            "SOX",
+            "state_breach_notification"
+          ]
+        },
+        "applicability": {
+          "type": "string",
+          "enum": ["likely", "possibly", "unlikely"],
+          "description": "likely: detected data almost certainly triggers this regulation. possibly: could apply depending on volume, geography, or context not visible in code. unlikely: not triggered by what was found, but included to show the assessment was made."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "One sentence explaining why this regulation was assessed at this applicability level."
+        }
+      }
+    },
+    "category": {
+      "type": "string",
+      "description": "Closed enum. Use the most specific applicable category. Domain buckets (CODE_*, DEP_*, SECRET_*, CONFIG_*, ARCH_*) are preferred when applicable; the named non-prefixed categories (AUTHN_failure, AUTHZ_failure, INSECURE_DESIGN, INTEGRITY_failure) cover OWASP categories without a clean domain equivalent.",
+      "enum": [
+        "CODE_injection",
+        "CODE_crypto_failure",
+        "CODE_input_validation",
+        "CODE_unsafe_api_use",
+        "AUTHN_failure",
+        "AUTHZ_failure",
+        "INSECURE_DESIGN",
+        "INTEGRITY_failure",
+        "DEP_known_cve",
+        "DEP_supply_chain_risk",
+        "SECRET_hardcoded",
+        "SECRET_committed_history",
+        "SECRET_logged",
+        "CONFIG_insecure_default",
+        "CONFIG_excessive_permission",
+        "CONFIG_iac_misconfig",
+        "ARCH_trust_boundary",
+        "ARCH_missing_authz",
+        "ARCH_data_flow_risk",
+        "ARCH_attack_surface",
+        "ARCH_logging_gap",
+        "OTHER"
+      ]
+    },
+    "owasp_id": {
+      "type": "string",
+      "enum": ["A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line_start", "line_end", "quote"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Project-relative path."
+        },
+        "line_start": { "type": "integer", "minimum": 1 },
+        "line_end": { "type": "integer", "minimum": 1 },
+        "quote": {
+          "type": "string",
+          "description": "Verbatim excerpt from the source. Used to ground the finding and let the reader audit the model's interpretation."
+        }
+      }
+    },
+    "cvss_vector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "vector", "score"],
+      "description": "Optional. Only populated for findings tied to a published CVE — the model copies the authoritative upstream score; it does NOT author CVSS values itself.",
+      "properties": {
+        "version": { "type": "string", "enum": ["3.0", "3.1", "4.0"] },
+        "vector": { "type": "string" },
+        "score": { "type": "number", "minimum": 0, "maximum": 10 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "severity",
+        "confidence",
+        "title",
+        "evidence",
+        "remediation"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier. Derivation: first 8 hex chars of sha1(category + '|' + evidence.file + '|' + str(evidence.line_start)). Title is excluded so the same finding gets the same ID across runs regardless of how the model phrased the title."
+        },
+        "category": { "$ref": "#/$defs/category" },
+        "owasp_mapping": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/owasp_id" },
+          "uniqueItems": true,
+          "description": "Optional cross-reference to OWASP Top 10 categories."
+        },
+        "severity": { "$ref": "#/$defs/severity" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One-line summary. Should be specific and quotable; generic titles like 'Input validation issue' are not acceptable."
+        },
+        "evidence": {
+          "$ref": "#/$defs/location",
+          "description": "Primary code/config location."
+        },
+        "related_locations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/location" },
+          "description": "Additional locations relevant to the finding."
+        },
+        "exploitation_path": {
+          "type": "string",
+          "description": "Concrete description of how this finding becomes a real-world exploit or harm. Required when severity is critical or high, OR when category begins with ARCH_."
+        },
+        "remediation": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Concrete, actionable fix. Avoids generic advice like 'sanitize inputs'."
+        },
+        "references": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "External references: CWE IDs, vendor documentation, CVE IDs, OWASP cheat sheet URLs, etc."
+        },
+        "cvss": { "$ref": "#/$defs/cvss_vector" },
+        "dfd_element": {
+          "type": "string",
+          "description": "Optional. Reference to a Mermaid node ID in threat_model.dfd.mermaid (e.g. 'admin_panel', 'users_db'). Reserved for future finding-to-diagram cross-referencing and HTML interactivity. Set it now; use it later."
+        }
+      },
+      "allOf": [
+        {
+          "description": "exploitation_path required when severity is critical or high.",
+          "if": {
+            "properties": { "severity": { "enum": ["critical", "high"] } },
+            "required": ["severity"]
+          },
+          "then": { "required": ["exploitation_path"] }
+        },
+        {
+          "description": "exploitation_path required for all ARCH_* findings regardless of severity.",
+          "if": {
+            "properties": { "category": { "pattern": "^ARCH_" } },
+            "required": ["category"]
+          },
+          "then": { "required": ["exploitation_path"] }
+        },
+        {
+          "description": "cvss field is only meaningful when the finding cites a CVE in references.",
+          "if": { "required": ["cvss"] },
+          "then": {
+            "properties": {
+              "references": {
+                "type": "array",
+                "contains": { "type": "string", "pattern": "CVE-\\d{4}-\\d+" }
+              }
+            },
+            "required": ["references"]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,8 +1,8 @@
 # Inference Recon — Wrap-up
 
-Run this after you've worked through your findings.
+Run this after you've worked through your findings. Paste it into your AI in the same window where you ran the scan.
 
-Paste this prompt into your AI, then paste your original Inference Recon report after it. Your AI checks the current code against every finding, flags false positives, and generates a structured feedback block to submit at [inferencerecon.com/feedback.html](https://inferencerecon.com/feedback.html).
+Your AI reads `SECURITY_REPORT.md` automatically — no copy-pasting your report. It checks every finding, flags false positives, and generates a feedback block to submit at [inferencerecon.com/feedback](https://inferencerecon.com/feedback).
 
 ---
 
@@ -11,7 +11,7 @@ Paste this prompt into your AI, then paste your original Inference Recon report 
 
 You are reviewing the results of a previous Inference Recon security scan on this codebase.
 
-Paste your Inference Recon report below this prompt before hitting enter. If it is missing, ask for it before proceeding.
+Read SECURITY_REPORT.md from the current working directory — this file was written automatically by the Inference Recon scan. If it is not present, ask the user to paste their report before proceeding.
 
 ---
 
@@ -56,5 +56,5 @@ inference_recon_feedback:
 
 ---
 
-Copy the block above and submit it at: https://inferencerecon.com/feedback.html
+Copy the block above and submit it at: https://inferencerecon.com/feedback
 ```

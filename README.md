@@ -11,12 +11,11 @@ Feed this prompt to your AI. Get a security report back in minutes — scorecard
 ## How to use it
 
 1. Copy the prompt below
-2. Open Claude Code, Cursor, or Codex with your project loaded
-3. Paste and hit enter
-4. Read your report
-5. Paste any finding back and say "fix this"
+2. Paste into Claude Code or Cursor and hit enter — your report lands in chat and is written to `SECURITY_REPORT.md`
+3. Work through findings in the same window: paste any finding back and say "fix this"
+4. Paste the wrap-up prompt — your AI reads `SECURITY_REPORT.md` automatically, checks every finding, generates a feedback block
 
-Your AI will ask for permission before reading your files. That's expected — approve it to continue.
+Tested on Claude Code, Cursor, and Codex. Works on GitHub Copilot, Windsurf, Aider, and others.
 
 ---
 
@@ -41,11 +40,15 @@ Execute steps in order. Do not skip ahead.
 
 ### Step 0 — Size budget
 
+Emit: `→ Step 0: Counting files and measuring codebase size...`
+
 Count source files and lines (excluding `node_modules/`, `vendor/`, `dist/`, `__pycache__/`, minified assets). Budget: ≤150 source files AND ≤10,000 total lines AND no single file >2,000 lines → within budget. Over any threshold → still produce the report; prioritise auth code, route handlers, dependency manifests, and config files; note skipped files at the end.
 
 Emit: `✓ Step 0 complete — <N> files, <N> lines, budget <within/exceeded>`
 
 ### Step 1 — Inventory
+
+Emit: `→ Step 1: Identifying stack, framework, entrypoints, and trust boundaries...`
 
 Identify (mentally, do not emit yet):
 - Primary language(s) and framework(s)
@@ -111,7 +114,7 @@ If the stack is **Next.js + Supabase** (i.e., `package.json` contains `next` and
 
 If the stack is **Next.js + self-hosted Postgres** (i.e., `package.json` contains `next` AND one of `pg`, `postgres`, `drizzle-orm`, `kysely`, `prisma`, `@neondatabase/serverless`, AND does NOT contain `@supabase/supabase-js`), apply these targeted checks within the relevant steps below.
 
-**NPG-01** (Step 4): Flag any SQL query where user-controlled input is inserted via template literals or string concatenation (e.g., `SELECT ... WHERE id = ${req.body.id}`). Parameterized queries or ORM-generated queries with no raw interpolation are expected. **Severity: critical**
+**NPG-01** (Step 4): Flag any SQL query where user-controlled input is inserted via template literals or string concatenation (e.g., `` `SELECT ... WHERE id = ${req.body.id}` ``). Parameterized queries or ORM-generated queries with no raw interpolation are expected. **Severity: critical**
 
 **NPG-02** (Step 3): Flag `rejectUnauthorized: false` in the DB client SSL config when active in production — disables TLS certificate verification, enabling MITM on the DB connection. *Not a finding:* `rejectUnauthorized: false` gated exclusively on `NODE_ENV !== 'production'`. **Severity: medium**
 
@@ -125,11 +128,15 @@ If the stack is **Next.js + self-hosted Postgres** (i.e., `package.json` contain
 
 ### Step 2 — Dependencies pass
 
+Emit: `→ Step 2: Scanning dependencies for known CVEs and supply-chain risks...`
+
 Flag pinned dependency versions with a specific CVE you can cite with confidence. Flag supply-chain risks: no lockfile, unpinned major deps, abandoned packages. Do not flag a package simply because it is old — "outdated" without a specific CVE is not a finding.
 
 Emit: `✓ Step 2 complete — <N> dependencies checked, <N> flagged`
 
 ### Step 3 — Secrets & config pass
+
+Emit: `→ Step 3: Scanning for hardcoded secrets and configuration issues...`
 
 Flag hardcoded credentials/API keys/tokens, secrets written to logs, insecure framework defaults (debug mode in prod, wildcard CORS, weak session config), and overly permissive roles. Discipline: a random-looking string is not a secret unless it has a recognisable credential format or context confirms it's a real credential. Placeholders and test fixtures are not findings.
 
@@ -137,11 +144,15 @@ Emit: `✓ Step 3 complete — <N> secrets/config issues found`
 
 ### Step 4 — Code-level pass
 
+Emit: `→ Step 4: Scanning code for injection, auth flaws, and vulnerability patterns...`
+
 Flag injection, cryptographic failures, input validation gaps, unsafe API use, authentication flaws, code-level authorisation failures, and integrity failures. Include frontend templates and JS files for XSS patterns. Focus on code reachable from entrypoints first.
 
 Emit: `✓ Step 4 complete — <N> code-level findings`
 
 ### Step 5 — Architecture pass
+
+Emit: `→ Step 5: Reviewing architecture for systemic security gaps...`
 
 Flag: missing auth at the architectural level (whole route groups, admin panels without any middleware), trust boundary violations, sensitive data flowing to unintended destinations, unnecessary attack surface (debug/admin endpoints on public interfaces), absent security event logging, and business logic / insecure design flaws.
 
@@ -151,7 +162,7 @@ Emit: `✓ Step 5 complete — <N> architectural findings`
 
 ### Step 6 — Scorecard
 
-Emit: `✓ Step 6 complete — building report...`
+Emit: `→ Step 6: Scoring findings and calculating grades...`
 
 severity_weight  = { critical:10, high:5, medium:2, low:1, info:0 }
 confidence_weight = { high:1.0, medium:0.5, low:0.2 }
@@ -162,9 +173,17 @@ overall          = worst non-N/A bucket grade
 
 Bucket with no applicable findings → N/A. Clean bucket → A.
 
+Emit: `✓ Step 6 complete — building report...`
+
 ### Step 7 — Emit the report
 
-Emit the markdown report below. Nothing else — no JSON, no preamble, no closing commentary.
+Emit: `→ Step 7: Writing report...`
+
+Write the full markdown report (from the Report structure section below) to `SECURITY_REPORT.md` in the current working directory.
+
+Emit: `✓ SECURITY_REPORT.md written — keep this file, the wrap-up prompt reads it automatically.`
+
+Then emit the same report as chat output. Nothing else — no JSON, no additional preamble, no closing commentary.
 
 ---
 
@@ -210,9 +229,9 @@ Emit the markdown report below. Nothing else — no JSON, no preamble, no closin
 
 **Fix your findings.** Paste any finding from this report back into this window and say "fix this." Work critical first, then high, then medium. Low findings can wait.
 
-**Then cover everything outside your code.** Your domain, accounts, infrastructure, and provider security are a separate surface this scan cannot see. The Human Guide covers them — it's at [inferencerecon.com/guide.html](https://inferencerecon.com/guide.html).
+**Then cover everything outside your code.** Your domain, accounts, infrastructure, and provider security are a separate surface this scan cannot see. The Human Guide covers them — find it at `inferencerecon.com/guide`.
 
-**When you're done fixing, run the wrap-up prompt.** At [inferencerecon.com/wrap-up.html](https://inferencerecon.com/wrap-up.html). Paste it into your AI the same way you ran this one. It will check which findings were addressed, flag false positives, and generate a feedback block for you to submit. Nothing to fill in.
+**When you're done fixing, run the wrap-up prompt.** Find it at `inferencerecon.com/wrap-up`. Paste it into your AI the same way you ran this one. It will check which findings were addressed, flag false positives, and generate a feedback block for you to submit. Nothing to fill in.
 
 ---
 
@@ -230,9 +249,9 @@ What this means: the patterns this tool looks for were not present in your sourc
 
 What this does not mean: your project is fully secure. This tool cannot assess your infrastructure, your deployment configuration, your domain and DNS setup, your provider account security, or anything that requires running your code rather than reading it.
 
-**Your next step is the Human Guide.** It covers your domain, accounts, infrastructure, and provider security — the surfaces this scan can't see. It's at [inferencerecon.com/guide.html](https://inferencerecon.com/guide.html). A clean code scan makes that step more important, not less.
+**Your next step is the Human Guide.** It covers your domain, accounts, infrastructure, and provider security — everything this scan cannot see. Find it at `inferencerecon.com/guide`. A clean code scan makes that step more important, not less.
 
-**Then run the wrap-up prompt** — at [inferencerecon.com/wrap-up.html](https://inferencerecon.com/wrap-up.html). It confirms the clean result and closes the loop.
+**Then run the wrap-up prompt** — at `inferencerecon.com/wrap-up`. It confirms the clean result and closes the loop.
 
 Your code was read by your AI, in your session. It was not sent anywhere else.
 
@@ -276,11 +295,9 @@ Your code was read by your AI, in your session. It was not sent anywhere else.
 
 ## After the scan
 
-**Fix your findings** — paste any finding back into your AI and say "fix this." Work critical first.
+**Cover the non-code surface** — your domain, accounts, and infrastructure aren't in your source files. The [Human Guide](https://inferencerecon.com/guide) covers them. Most items take under 15 minutes.
 
-**Cover the non-code surface** — your domain, accounts, and infrastructure aren't in your source files. The [Human Guide](https://inferencerecon.com/guide.html) covers them.
-
-**Run the wrap-up** — the [wrap-up prompt](https://inferencerecon.com/wrap-up.html) checks which findings were addressed, flags false positives, and generates a structured feedback block. Paste it into your AI the same way you ran this one.
+**Run the wrap-up** — paste the [wrap-up prompt](https://inferencerecon.com/wrap-up) into your AI in the same window. It reads `SECURITY_REPORT.md` automatically — no copy-pasting your report. Checks every finding, flags false positives, generates a feedback block to submit.
 
 ---
 
